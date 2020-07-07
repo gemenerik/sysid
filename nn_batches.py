@@ -1,7 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
-np.random.seed(1)
+import sys
 
 
 def radial_basis_function(x, a, c):
@@ -17,7 +15,7 @@ def diff_radial_basis_function(x, a, c):
 
 
 def least_squares(desired_output, current_output):
-    return 0.5 * np.square(desired_output - current_output)
+    return np.square(desired_output - current_output)
 
 
 def evaluate_error(net, desired_output, current_output):
@@ -29,56 +27,90 @@ def evaluate_error(net, desired_output, current_output):
 
 
 def levenberg_marquardt(damping, jacobian, input_weights, error, type):
-    weight_change = np.linalg.inv(jacobian.T.dot(jacobian) + damping*np.eye(len(jacobian))).dot(jacobian.T*error)
+    # weight_change = np.linalg.inv(jacobian.T.dot(jacobian) + damping*np.eye(len(jacobian[0]))).dot(jacobian.T*error)
+    weight_change = np.linalg.inv(jacobian.T.dot(jacobian) + damping * np.eye(len(jacobian[0])))
+    weight_change = weight_change.dot(jacobian.T.dot(error))
     if type:
-        output_weights = input_weights.ravel() - weight_change
-        output_weights = np.array(np.split(output_weights, 2))
+        output_weights = (input_weights.ravel() - weight_change.T)[0]
+        output_weights = np.array(np.split(output_weights.T, 2))
     else:
-        output_weights = (input_weights.T - weight_change).T
+        output_weights = (input_weights.T - weight_change.T).T
     return output_weights
 
 
-def train_neural_network(net, input, desired_output):
+def train_neural_network(net, input, desired_output, test_data):
     """Trains neural networks
     input, desired_ouput are arrays of inputs and the ground truth / output
     """
     current_epoch = 0
-    current_error = 1E3
-    # input_weights = net.input_weights
-    # output_weights = net.output_weights
+    train_error = 1e3
+    epoch_steps = int(np.floor(len(input[0]) / net.batch_size))
+    unused_data = len(input[0]) % net.batch_size
+    if unused_data > 0:
+        print(unused_data, 'unused datapoints due to data length & batch size combination.')
+    assert net.batch_size <= len(input[0])
+
+    test_error_log = []
+    train_error_log = []
+
+    stored_exception = False
 
     while current_epoch <= net.max_epochs:
-        if current_error > net.goal:
-            for i in range(len(input)):
-                current_input = input[i]
-                current_desired_output = desired_output[i]
-                if net.activation_function == radial_basis_function:
-                    if net.optimizer == levenberg_marquardt:
-                        current_output, current_output_hidden_layer = net.evaluate(current_input)
-                        current_error = evaluate_error(net, current_desired_output, current_output)
-                        # print('Current input is ', current_input)
-                        # print('Current output is ', current_output)
-                        # print('Desired output is ', desired_output)
-                        # print('Error is ', current_error)
-                        input_jacobian, output_jacobian = net.get_jacobian(current_input, current_desired_output)
-                        new_input_weights = levenberg_marquardt(LM_DAMPING, input_jacobian, net.input_weights, error=current_error, type = True)
-                        new_output_weights = levenberg_marquardt(LM_DAMPING, output_jacobian, net.output_weights, error=current_error, type = False)
-                        # print('Inputs ', net.input_weights, new_input_weights)
-                        # print('Outputs ', net.output_weights, new_output_weights)
-                        net.input_weights = new_input_weights
-                        net.output_weights = new_output_weights
-                        print('Epoch ', current_epoch, ' done.')
-                        print(current_error)
-                        current_epoch += 1
-        else:
-            break
+        try:
+            if train_error > net.goal:
+                for i in range(epoch_steps):
+                    current_input = np.array(input)[:, i*net.batch_size:i*net.batch_size+net.batch_size]
+                    current_desired_output = np.array(desired_output[i*net.batch_size:i*net.batch_size+net.batch_size])
+                    if net.activation_function == radial_basis_function:
+                        if net.optimizer == levenberg_marquardt:
+                            batch_output = []
+                            current_error = []
+                            for j in range(net.batch_size):
+                                current_output, current_output_hidden_layer = net.evaluate(current_input[:, j])
+                                batch_output.append(current_output)
+                                current_error.append(evaluate_error(net, current_desired_output[j], current_output))
+
+                            input_jacobian, output_jacobian = net.get_jacobian(current_input, current_desired_output)
+                            new_input_weights = levenberg_marquardt(net.damping, input_jacobian, net.input_weights, error=current_error, type = True)
+                            new_output_weights = levenberg_marquardt(net.damping, output_jacobian, net.output_weights, error=current_error, type = False)
+                            net.input_weights = new_input_weights
+                            net.output_weights = new_output_weights
+                current_epoch += 1
+
+                # todo; evaluate error of training set
+                test_output = []
+                for z in range(len(test_data[0])):
+                    test_output.append(net.evaluate([test_data[0,z], test_data[1,z]])[0])
+                desired_test_output = test_data[2,:]
+                # test_error = 1 / len(test_data[0]) * np.sum(np.square(np.array(desired_test_output) - test_output))
+                test_error = (np.square(desired_test_output - test_output)).mean(axis=None)
+                test_error_log.append(test_error)
+
+                train_output = []
+                for z in range(len(input[0])):
+                    train_output.append(net.evaluate([np.array(input)[0, z], np.array(input)[1, z]])[0])
+                desired_train_output = desired_output[:]
+                # train_error = 1 / len(input[0]) * np.sum(np.square(np.array(desired_train_output) - train_output))
+                train_error = (np.square(desired_train_output - train_output)).mean(axis=None)
+                train_error_log.append(train_error)
+                print(np.shape(np.array(desired_train_output) - train_output))
+
+                print('Epoch ', current_epoch)
+                print('Train error is ', train_error)
+                print('Test error is ', test_error)
+
+            if stored_exception:
+                return train_error_log, test_error_log, current_epoch
+        except KeyboardInterrupt:
+            stored_exception = sys.exc_info()
+    return train_error_log, test_error_log, current_epoch
 
 
 class NeuralNetwork:
     """Defines all parameters of the neural network"""
     def __init__(self, number_of_inputs, number_of_hidden_neurons, number_of_outputs, input_bias_weights,
                  output_bias_weights, range, max_epochs, goal, min_gradient, learning_rate, activation_function,
-                 optimizer, loss_function, input_weights, output_weights, centers, batch_size):
+                 optimizer, loss_function, input_weights, output_weights, centers, batch_size, damping):
         self.number_of_inputs = number_of_inputs
         self.number_of_hidden_neurons = number_of_hidden_neurons
         self.number_of_outputs = number_of_outputs
@@ -96,6 +128,7 @@ class NeuralNetwork:
         self.output_weights = output_weights
         self.centers = centers
         self.batch_size = batch_size
+        self.damping = damping
 
     def evaluate(self, current_input):
         current_output = np.zeros(self.number_of_outputs)
@@ -105,11 +138,13 @@ class NeuralNetwork:
                 for k in range(self.number_of_outputs):
                     xi = current_input[i]
                     yi = xi  # linear node
+
                     xj = yi * self.input_weights[i, j]
                     if self.activation_function == radial_basis_function:
                         yj = radial_basis_function(xj, 1, self.centers[j])  # todo; set a, check if centers should be 2D
                     else:
                         raise Exception("Activation function not defined")
+
                     current_output_hidden_layer += yj  # todo; what is output_hidden_layer used for in the Jacobian?
                     xk = yj * self.output_weights[j, k]
                     yk = xk  # linear node
@@ -117,51 +152,24 @@ class NeuralNetwork:
         return current_output, current_output_hidden_layer
 
     def get_jacobian(self, current_input, desired_output):
-        jacobian_input_temp = np.zeros((len(self.input_weights), len(self.input_weights.T)))
-        # jacobian_input=np.zeros((len(self.input_weights) * len(self.input_weights.T)))
-        jacobian_output = np.zeros((len(self.output_weights) * len(self.output_weights.T)))
-        output, output_hidden_layer = self.evaluate(current_input)
-        for i in range(self.number_of_inputs):
-            for j in range(self.number_of_hidden_neurons):
-                jacobian_output[j] = -(desired_output - output) * output_hidden_layer[j]
-                # [w11, w12, w13, w21, w22, w23]
-                for k in range(self.number_of_outputs):  # which is just one in our case
-                    # 0 through 5
-                    temp1 = (-(desired_output - output)[k])
-                    temp2 = temp1 * self.output_weights[j, k]
-                    temp3 = temp2 * diff_radial_basis_function(current_input[i], 1, self.centers[j])  # todo; set a
-                    jacobian_input_temp[i, j] = temp3 * current_input[i]
-        jacobian_input = jacobian_input_temp.ravel()
-        return jacobian_input, jacobian_output
-
-
-MAX_EPOCHS = 100
-GOAL = 0.001
-MIN_GRADIENT = 0
-LEARNING_RATE = 0.001
-LM_DAMPING = 1
-NUMBER_OF_HIDDEN_NEURONS = 3
-BATCH_SIZE = 3
-
-NUMBER_OF_INPUTS = 2
-NUMBER_OF_OUTPUTS = 1
-
-# weights initialization
-INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
-OUTPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS, NUMBER_OF_OUTPUTS)
-CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
-
-rbf_network = NeuralNetwork(number_of_inputs=NUMBER_OF_INPUTS, number_of_hidden_neurons=NUMBER_OF_HIDDEN_NEURONS,
-                            number_of_outputs=NUMBER_OF_OUTPUTS, input_bias_weights=0, output_bias_weights=0, range=0,
-                            max_epochs=MAX_EPOCHS, goal=GOAL, min_gradient=MIN_GRADIENT, learning_rate=LEARNING_RATE,
-                            activation_function=radial_basis_function, optimizer=levenberg_marquardt,
-                            loss_function=least_squares, input_weights=INPUT_WEIGHTS_INIT,
-                            output_weights=OUTPUT_WEIGHTS_INIT, centers=CENTERS_INIT, batch_size=BATCH_SIZE)
-
-# load data
-data = np.genfromtxt('data.csv', delimiter=',')
-print(data)
-
-train_neural_network(rbf_network, [data[0], data[1]], data[2])
-# print(rbf_network.input_weights, rbf_network.output_weights)
-# print(rbf_network.evaluate([data[0][2], data[1][2]]), data[2][0])
+        batch_jacobian_input = []
+        batch_jacobian_output = []
+        for z in range(self.batch_size):
+            jacobian_input_temp = np.zeros((len(self.input_weights), len(self.input_weights.T)))
+            # jacobian_input=np.zeros((len(self.input_weights) * len(self.input_weights.T)))
+            jacobian_output = np.zeros((len(self.output_weights) * len(self.output_weights.T)))
+            output, output_hidden_layer = self.evaluate(current_input[:, z])
+            for i in range(self.number_of_inputs):
+                for j in range(self.number_of_hidden_neurons):
+                    jacobian_output[j] = -(desired_output[z] - output) * output_hidden_layer[j]
+                    # [w11, w12, w13, w21, w22, w23]
+                    for k in range(self.number_of_outputs):  # which is just one in our case
+                        # 0 through 5
+                        temp1 = (-(desired_output - output)[k])
+                        temp2 = temp1 * self.output_weights[j, k]
+                        temp3 = temp2 * diff_radial_basis_function(current_input[i, z], 1, self.centers[j])  # todo; set a
+                        jacobian_input_temp[i, j] = temp3 * current_input[i, z]
+            jacobian_input = jacobian_input_temp.ravel()
+            batch_jacobian_input.append(jacobian_input)
+            batch_jacobian_output.append(jacobian_output)
+        return np.array(batch_jacobian_input), np.array(batch_jacobian_output)

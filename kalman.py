@@ -227,8 +227,8 @@ for k in range(0, N):
     # todo; define matrix using sympy Matrix([udot])
 
     XX_k1k1[:, k] = x_k_1k_1
-print(XX_k1k1[:, -1])
-do_plot = 1
+# print(XX_k1k1[:, -1])
+do_plot = 0
 if do_plot:
     start = 0
     end = -1
@@ -320,9 +320,17 @@ if do_plot:
 
 # generate train, val, test data
 PERCENTAGE_VALIDATION = 0.2
+np.random.seed(1)
 
 alpha_corrected = z_k[0,0:-1]-XX_k1k1[3,0:-1]  # todo; this or c_p
 beta_p = z_pred[1, 0:-1]
 cm_a = XX_k1k1[3, 0:-1]
-data = [alpha_corrected, beta_p, cm_a]
-np.savetxt("data.csv", data, delimiter=",")
+
+data = np.array([alpha_corrected, beta_p, cm_a])
+indices = np.random.permutation(data[0].shape[0])
+training_idx, test_idx = indices[:int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected))], indices[int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected)):]
+training, test = data[:,training_idx], data[:,test_idx]
+
+np.savetxt("train.csv", training, delimiter=",")
+np.savetxt("test.csv", test, delimiter=",")
+
