@@ -327,6 +327,10 @@ beta_p = z_pred[1, 0:-1]
 cm_a = XX_k1k1[3, 0:-1]
 
 data = np.array([alpha_corrected, beta_p, cm_a])
+time_sequence_indices = np.arange(5000, int(5000+10/0.01))
+time_sequence = data[:, time_sequence_indices]
+np.savetxt("time_sequence.csv", time_sequence, delimiter=",")
+
 indices = np.random.permutation(data[0].shape[0])
 training_idx, test_idx = indices[:int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected))], indices[int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected)):]
 training, test = data[:,training_idx], data[:,test_idx]
