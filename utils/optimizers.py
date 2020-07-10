@@ -23,7 +23,6 @@ def back_propagation(learning_rate, jacobian, input_weights, type):
 
 def levenberg_marquardt(damping, jacobian, input_weights, error, type):
     """Returns updated weights using Levenberg-Marquardt optimization"""
-
     weight_change = inv(jacobian.T.dot(jacobian) + damping * eye(len(jacobian[0])))
     weight_change = weight_change.dot(jacobian.T.dot(error))
     if type:

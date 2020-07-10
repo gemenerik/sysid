@@ -4,22 +4,8 @@ import time
 from utils.optimizers import levenberg_marquardt, back_propagation
 
 
-"""ERROR"""
-
-
-def least_squares(desired_output, current_output):
+def squared_error(desired_output, current_output):
     return np.square(desired_output - current_output)
-
-
-def evaluate_error(net, desired_output, current_output):
-    if net.loss_function == least_squares:
-        error = least_squares(desired_output, current_output)
-    else:
-        raise Exception("Loss function not defined")
-    return error
-
-
-"""(TRAIN) NEURAL NETWORK"""
 
 
 def train_neural_network(net, input, desired_output, test_data):
@@ -55,16 +41,11 @@ def train_neural_network(net, input, desired_output, test_data):
                 for i in range(epoch_steps):
                     current_input = np.array(input)[:, i*net.batch_size:i*net.batch_size+net.batch_size]
                     current_desired_output = np.array(desired_output[i*net.batch_size:i*net.batch_size+net.batch_size])
-                    # if net.activation_function == radial_basis_function:
-                    #     if net.optimizer == levenberg_marquardt:
-                    batch_output = []
-                    current_error = []
-                    for j in range(net.batch_size):
-                        current_output, current_output_hidden_layer = net.evaluate(current_input[:, j])
-                        batch_output.append(current_output)
-                        current_error.append(evaluate_error(net, current_desired_output[j], current_output))
-                    # train_output.extend(batch_output)
+                    batch_output, batch_hidden_output = net.evaluate(current_input)
+                    current_error = net.evaluate_error(current_desired_output, batch_output).T
+
                     input_jacobian, output_jacobian = net.get_jacobian(current_input, current_desired_output)
+
                     if net.optimizer == levenberg_marquardt:
                         new_input_weights = levenberg_marquardt(net.damping, input_jacobian, net.input_weights,
                                                                 error=current_error, type = True)
@@ -138,49 +119,56 @@ class NeuralNetwork:
         self.damping = damping
         self.diff_activation_function = diff_activation_function
 
-    def evaluate(self, current_input):
+    def evaluate(self, input):
         """Feeds forward inputs and return output of network"""
-
-        current_output = np.zeros(self.number_of_outputs)
-        current_output_hidden_layer = np.zeros(self.number_of_hidden_neurons)
+        input = np.array(input)
+        if input.ndim > 1:
+            # input shape (2, 128)
+            output = np.zeros((self.number_of_outputs, np.size(input, 1)))
+            output_hidden_layer = np.zeros((self.number_of_hidden_neurons, np.size(input, 1)))
+        else:
+            output = np.zeros(self.number_of_outputs)
+            output_hidden_layer = np.zeros(self.number_of_hidden_neurons)
         for i in range(self.number_of_inputs):
+            xi = input[i]
+            yi = xi  # linear node
             for j in range(self.number_of_hidden_neurons):
+                xj = yi * self.input_weights[i, j]
+                yj = self.activation_function(xj, 1, self.centers[j])  # todo; update centers
+                output_hidden_layer += yj
                 for k in range(self.number_of_outputs):
-                    xi = current_input[i]
-                    yi = xi  # linear node
-
-                    xj = yi * self.input_weights[i, j]
-                    # if self.activation_function == radial_basis_function:
-                    yj = self.activation_function(xj, 1, self.centers[j])  # todo; set a, check if centers should be 2D
-                    # else:
-                    #     raise Exception("Activation function not defined")
-
-                    current_output_hidden_layer += yj
                     xk = yj * self.output_weights[j, k]
                     yk = xk  # linear node
-                    current_output += yk
-        return current_output, current_output_hidden_layer
+                    output += yk
+        return output, output_hidden_layer
+
+    def evaluate_error(self, desired_output, current_output):
+        if self.loss_function == squared_error:
+            error = squared_error(desired_output, current_output)
+        else:
+            raise Exception("Loss function not defined")
+        return error
 
     def get_jacobian(self, current_input, desired_output):
         """Returns Jacobian with respect to both input and output weights"""
 
         batch_jacobian_input = []
         batch_jacobian_output = []
+        output, output_hidden_layer = self.evaluate(current_input)
         for z in range(self.batch_size):
             jacobian_input_temp = np.zeros((len(self.input_weights), len(self.input_weights.T)))
             # jacobian_input=np.zeros((len(self.input_weights) * len(self.input_weights.T)))
             jacobian_output = np.zeros((len(self.output_weights) * len(self.output_weights.T)))
-            output, output_hidden_layer = self.evaluate(current_input[:, z])
             for i in range(self.number_of_inputs):
                 for j in range(self.number_of_hidden_neurons):
-                    jacobian_output[j] = -(desired_output[z] - output) * output_hidden_layer[j]
+                    jacobian_output[j] = -(desired_output[z] - output[:,z]) * output_hidden_layer[j, z]
                     # [w11, w12, w13, w21, w22, w23]
                     for k in range(self.number_of_outputs):  # which is just one in our case
                         # 0 through 5
                         temp1 = (-(desired_output - output)[k])
                         temp2 = temp1 * self.output_weights[j, k]
                         temp3 = temp2 * self.diff_activation_function(current_input[i, z], 1, self.centers[j])  # todo; set a
-                        jacobian_input_temp[i, j] = temp3 * current_input[i, z]
+                        jacobian_input_temp[i, j] = temp3[z] * current_input[i, z]
             jacobian_input = jacobian_input_temp.ravel()
             batch_jacobian_input.append(jacobian_input)
             batch_jacobian_output.append(jacobian_output)

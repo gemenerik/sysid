@@ -22,7 +22,7 @@ rbf_network = NeuralNetwork(number_of_inputs=NUMBER_OF_INPUTS, number_of_hidden_
                             number_of_outputs=NUMBER_OF_OUTPUTS, input_bias_weights=0, output_bias_weights=0, range=0,
                             max_epochs=MAX_EPOCHS, goal=GOAL, min_gradient=MIN_GRADIENT, learning_rate=LEARNING_RATE,
                             activation_function=radial_basis_function, optimizer=levenberg_marquardt,
-                            loss_function=least_squares, input_weights=INPUT_WEIGHTS_INIT,
+                            loss_function=squared_error, input_weights=INPUT_WEIGHTS_INIT,
                             output_weights=OUTPUT_WEIGHTS_INIT, centers=CENTERS_INIT, batch_size=BATCH_SIZE,
                             damping=LM_DAMPING, diff_activation_function=diff_radial_basis_function)
 

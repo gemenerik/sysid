@@ -1,17 +1,18 @@
-from nn_batches import train_neural_network, NeuralNetwork
+from nn_batches import train_neural_network, NeuralNetwork, squared_error
 import matplotlib.pyplot as plt
 from utils.activation_functions import radial_basis_function, diff_radial_basis_function, sigmoid, diff_sigmoid
 from utils.optimizers import back_propagation, levenberg_marquardt
+import numpy as np
 
 
 def initialize_neural_network():
     return NeuralNetwork(number_of_inputs=NUMBER_OF_INPUTS, number_of_hidden_neurons=NUMBER_OF_HIDDEN_NEURONS,
-                           number_of_outputs=NUMBER_OF_OUTPUTS, input_bias_weights=0, output_bias_weights=0, range=0,
-                           max_epochs=MAX_EPOCHS, goal=GOAL, min_gradient=MIN_GRADIENT, learning_rate=LEARNING_RATE,
-                           activation_function=sigmoid, optimizer=OPTIMIZER,
-                           loss_function=least_squares, input_weights=INPUT_WEIGHTS_INIT,
-                           output_weights=OUTPUT_WEIGHTS_INIT, centers=CENTERS_INIT, batch_size=BATCH_SIZE,
-                           damping=LM_DAMPING, diff_activation_function=diff_sigmoid)
+                         number_of_outputs=NUMBER_OF_OUTPUTS, input_bias_weights=0, output_bias_weights=0, range=0,
+                         max_epochs=MAX_EPOCHS, goal=GOAL, min_gradient=MIN_GRADIENT, learning_rate=LEARNING_RATE,
+                         activation_function=sigmoid, optimizer=OPTIMIZER,
+                         loss_function=squared_error, input_weights=INPUT_WEIGHTS_INIT,
+                         output_weights=OUTPUT_WEIGHTS_INIT, centers=CENTERS_INIT, batch_size=BATCH_SIZE,
+                         damping=LM_DAMPING, diff_activation_function=diff_sigmoid)
 
 
 # load data
@@ -133,8 +134,8 @@ GOAL = 0.001
 MIN_GRADIENT = 0.000001
 LEARNING_RATE = 0.0001
 LM_DAMPING = 0.1
-NUMBER_OF_HIDDEN_NEURONS = 50
-BATCH_SIZE = 128
+NUMBER_OF_HIDDEN_NEURONS = 5
+BATCH_SIZE = 4
 OPTIMIZER = back_propagation
 
 plt.figure(dpi=300)
