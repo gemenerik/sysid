@@ -1,32 +1,7 @@
 import numpy as np
 import sys
 import time
-
-
-"""ACTIVATION FUNCTIONS"""
-
-
-def radial_basis_function(x, a, c):
-    v = (x - c) ** 2
-    # v = np.square(w) * (x - c)**2
-    return a * np.exp(-v)
-
-
-def diff_radial_basis_function(x, a, c):
-    v = (x - c) ** 2
-    # v = np.square(w) * (x - c)**2)
-    return -2*a*(x-c)*np.exp(-v)
-
-
-def sigmoid(x, a, c):
-    v = (x - c) ** 2
-    return 2/(1+np.exp(-2*v))-1
-
-
-def diff_sigmoid(x, a, c):
-    # v = (x - c) ** 2
-    # return 8*v*np.exp(2*np.square(v))
-    return sigmoid(x, a, c) * (1 - sigmoid(x, a, c))
+from utils.optimizers import levenberg_marquardt, back_propagation
 
 
 """ERROR"""
@@ -42,41 +17,6 @@ def evaluate_error(net, desired_output, current_output):
     else:
         raise Exception("Loss function not defined")
     return error
-
-
-"""OPTIMIZERS"""
-
-
-def back_propagation(learning_rate, jacobian, input_weights, type):
-    weight_change = learning_rate * jacobian
-    if len(weight_change) > 1:
-        input_weights = np.array(input_weights)
-        weight_change = np.array(weight_change.mean(axis=0))
-        if type:
-            output_weights = (input_weights.ravel() - weight_change.T)
-            output_weights = np.array(np.split(output_weights.T, 2))
-        else:
-            output_weights = (input_weights.T - weight_change).T
-    else:
-        if type:
-            output_weights = (input_weights.ravel() - weight_change.T)[0]
-            output_weights = np.array(np.split(output_weights.T, 2))
-        else:
-            output_weights = (input_weights.T - weight_change).T
-    return output_weights
-
-
-def levenberg_marquardt(damping, jacobian, input_weights, error, type):
-    """Returns updated weights using Levenberg-Marquardt optimization"""
-
-    weight_change = np.linalg.inv(jacobian.T.dot(jacobian) + damping * np.eye(len(jacobian[0])))
-    weight_change = weight_change.dot(jacobian.T.dot(error))
-    if type:
-        output_weights = (input_weights.ravel() - weight_change.T)[0]
-        output_weights = np.array(np.split(output_weights.T, 2))
-    else:
-        output_weights = (input_weights.T - weight_change.T).T
-    return output_weights
 
 
 """(TRAIN) NEURAL NETWORK"""
@@ -100,7 +40,7 @@ def train_neural_network(net, input, desired_output, test_data):
 
     stored_exception = False
 
-    while current_epoch <= net.max_epochs:
+    while current_epoch < net.max_epochs:
         try:
             if train_error > net.goal:
                 if error_improvement < net.min_gradient:
@@ -111,6 +51,7 @@ def train_neural_network(net, input, desired_output, test_data):
                     end_time = time.time()
                     print('Runtime ', end_time - start_time)
                     return train_error_log, test_error_log, current_epoch
+                # train_output = []
                 for i in range(epoch_steps):
                     current_input = np.array(input)[:, i*net.batch_size:i*net.batch_size+net.batch_size]
                     current_desired_output = np.array(desired_output[i*net.batch_size:i*net.batch_size+net.batch_size])
@@ -122,7 +63,7 @@ def train_neural_network(net, input, desired_output, test_data):
                         current_output, current_output_hidden_layer = net.evaluate(current_input[:, j])
                         batch_output.append(current_output)
                         current_error.append(evaluate_error(net, current_desired_output[j], current_output))
-
+                    # train_output.extend(batch_output)
                     input_jacobian, output_jacobian = net.get_jacobian(current_input, current_desired_output)
                     if net.optimizer == levenberg_marquardt:
                         new_input_weights = levenberg_marquardt(net.damping, input_jacobian, net.input_weights,
@@ -137,7 +78,6 @@ def train_neural_network(net, input, desired_output, test_data):
                     net.input_weights = new_input_weights
                     net.output_weights = new_output_weights
 
-                # todo; evaluate error of training set
                 test_output = []
                 for z in range(len(test_data[0])):
                     test_output.append(net.evaluate([test_data[0,z], test_data[1,z]])[0])
@@ -155,7 +95,6 @@ def train_neural_network(net, input, desired_output, test_data):
                 if current_epoch > 0:
                     error_improvement = min(train_error_log) - train_error
                 train_error_log.append(train_error)
-
                 current_epoch += 1
                 print('Epoch ', current_epoch)
                 print('Train error is ', train_error)
@@ -216,7 +155,7 @@ class NeuralNetwork:
                     # else:
                     #     raise Exception("Activation function not defined")
 
-                    current_output_hidden_layer += yj  # todo; what is output_hidden_layer used for in the Jacobian?
+                    current_output_hidden_layer += yj
                     xk = yj * self.output_weights[j, k]
                     yk = xk  # linear node
                     current_output += yk

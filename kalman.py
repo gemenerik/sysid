@@ -335,6 +335,6 @@ indices = np.random.permutation(data[0].shape[0])
 training_idx, test_idx = indices[:int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected))], indices[int((1-PERCENTAGE_VALIDATION)*len(alpha_corrected)):]
 training, test = data[:,training_idx], data[:,test_idx]
 
-np.savetxt("train.csv", training, delimiter=",")
-np.savetxt("test.csv", test, delimiter=",")
+np.savetxt("data/train.csv", training, delimiter=",")
+np.savetxt("data/test.csv", test, delimiter=",")
 
