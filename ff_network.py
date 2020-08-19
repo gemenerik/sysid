@@ -12,34 +12,34 @@ def initialize_neural_network():
                          activation_function=sigmoid, optimizer=OPTIMIZER,
                          loss_function=squared_error, input_weights=INPUT_WEIGHTS_INIT,
                          output_weights=OUTPUT_WEIGHTS_INIT, centers=CENTERS_INIT, batch_size=BATCH_SIZE,
-                         damping=LM_DAMPING, diff_activation_function=diff_sigmoid)
+                         damping=LM_DAMPING, diff_activation_function=diff_sigmoid, learning_schedule=LEARNING_SCHEDULE_BOOL)
 
 
 # load data
-# train_data = np.genfromtxt('train.csv', delimiter=',')
-# test_data = np.genfromtxt('test.csv', delimiter=',')
 train_data = np.genfromtxt('data/train_short.csv', delimiter=',')
 test_data = np.genfromtxt('data/test_short.csv', delimiter=',')
+# train_data = np.genfromtxt('data/train.csv', delimiter=',')
+# test_data = np.genfromtxt('data/test.csv', delimiter=',')
 time_data = np.genfromtxt('data/time_sequence.csv', delimiter=',')
 
-"""SENSITIVITY ANALYSIS"""
-# learning rate
-np.random.seed(1)
-MAX_EPOCHS = 200
-GOAL = 0.001
-MIN_GRADIENT = 0.00001
-LEARNING_RATE = 0.001
-LM_DAMPING = 1
-NUMBER_OF_HIDDEN_NEURONS = 15
-BATCH_SIZE = 128
-OPTIMIZER = back_propagation
+"""LEARNING RATE SENSITIVITY"""
+# np.random.seed(1)
+# MAX_EPOCHS = 1000
+# GOAL = 0.0001
+# MIN_GRADIENT = 0.000001
+# LEARNING_RATE = 0.1
+# LM_DAMPING = 1
+# NUMBER_OF_HIDDEN_NEURONS = 5
+# BATCH_SIZE = 128
+# # BATCH_SIZE = 8000
+# OPTIMIZER = back_propagation
+# LEARNING_SCHEDULE_BOOL = False
+#
+# NUMBER_OF_INPUTS = 2
+# NUMBER_OF_OUTPUTS = 1
 
-NUMBER_OF_INPUTS = 2
-NUMBER_OF_OUTPUTS = 1
-
-# plt.figure()
-# for i in [0.1, 0.01, 0.001, 0.0001]:
-#     LEARNING_RATE = i
+# plt.figure(dpi=300)
+# for LEARNING_RATE in [1, 0.1, 0.01, 0.001]:
 #
 #     # weights initialization
 #     INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
@@ -47,34 +47,57 @@ NUMBER_OF_OUTPUTS = 1
 #     # CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
 #     CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
 #     ff_network = initialize_neural_network()
-#     train_error_log, test_error_log, final_epoch = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
-#
-#     plt.plot(range(final_epoch), test_error_log, label='Test error, learning rate {}'.format(i))#, c='tab:orange')
-#     plt.plot(range(final_epoch), train_error_log, label='Train error, learning rate {}'.format(i))#, c='tab:blue')
-#     plt.xlabel('Epoch')
-#     plt.ylabel('RMS error [-]')
+#     train_error_log, test_error_log, final_epoch, min_error = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
+#     print(min_error)
+#     # plt.plot(range(final_epoch), test_error_log, label='Test error, learning rate {}'.format(str(LEARNING_RATE)))#, c='tab:orange')
+#     plt.plot(range(final_epoch), train_error_log, label='Train error, learning rate {}'.format(str(LEARNING_RATE)))#, c='tab:blue')
+# plt.xlabel('Epoch')
+# plt.ylabel('RMS error [-]')
 # plt.grid()
 # plt.legend()
 # plt.show()
 
+"""BATCH SIZE SENSITIVITY"""
+# LEARNING_SCHEDULE_BOOL = False
+# plt.figure(dpi=300)
+# for BATCH_SIZE in [32, 128, 512, 2048, 8000]:
+#
+#     # weights initialization
+#     INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
+#     OUTPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS, NUMBER_OF_OUTPUTS)
+#     # CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
+#     CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
+#     ff_network = initialize_neural_network()
+#     train_error_log, test_error_log, final_epoch, min_error = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
+#     print(min_error)
+#     # plt.plot(range(final_epoch), test_error_log, label='Test error, learning rate {}'.format(str(LEARNING_RATE)))#, c='tab:orange')
+#     plt.plot(range(final_epoch), train_error_log, label='Train error, batch size {}'.format(str(BATCH_SIZE)))#, c='tab:blue')
+# plt.xlabel('Epoch')
+# plt.ylabel('RMS error [-]')
+# plt.grid()
+# plt.legend()
+# plt.show()
 
-
-# # random weight initialization
+"""WEIGHT SEED INIT SENSITIVITY"""
 # np.random.seed(1)
-# MAX_EPOCHS = 100
+# MAX_EPOCHS = 1000
 # GOAL = 0.001
 # MIN_GRADIENT = 0.000001
-# LEARNING_RATE = 0.001
+# LEARNING_RATE = 0.01
 # LM_DAMPING = 1
-# NUMBER_OF_HIDDEN_NEURONS = 15
+# NUMBER_OF_HIDDEN_NEURONS = 5
 # BATCH_SIZE = 128
 # OPTIMIZER = back_propagation
 #
 # NUMBER_OF_INPUTS = 2
 # NUMBER_OF_OUTPUTS = 1
-#
-# plt.figure(dpi=300)
-# for i in range(1, 3):
+
+# LEARNING_SCHEDULE_BOOL = False
+
+# # for i in range(1, 3):
+# test_log = []
+# for i in [1, 2, 3]:
+#     plt.figure(dpi=300)
 #     np.random.seed(i)
 #
 #     # weights initialization
@@ -83,33 +106,138 @@ NUMBER_OF_OUTPUTS = 1
 #     # CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
 #     CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
 #     ff_network = initialize_neural_network()
-#     train_error_log, test_error_log, final_epoch = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
-#
+#     train_error_log, test_error_log, final_epoch, min_error = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
+#     print('minimum error is ', min_error)
 #     plt.plot(range(final_epoch), test_error_log, label='Test error, seed {}'.format(i))#, c='tab:orange')
 #     plt.plot(range(final_epoch), train_error_log, label='Train error, seed {}'.format(i))#, c='tab:blue')
 #     plt.xlabel('Epoch')
 #     plt.ylabel('RMS error [-]')
+#     plt.ylim(0, 1)
+#     plt.grid()
+#     plt.legend()
+#     plt.show()
+#     test_log.append(train_error_log)
+#     test_log.append(test_error_log)
+# np.savetxt('latest_results.csv', test_log)
+# # data initialization (maybe just mention that it has a significant effect)
+
+"""VARIABLE LEARNING RATE"""
+# np.random.seed(1)
+# MAX_EPOCHS = 2000
+# GOAL = 0.001
+# MIN_GRADIENT = 0 #this is lower now because we want to get better results
+# LEARNING_RATE = 0.1
+# LM_DAMPING = 0.1
+# NUMBER_OF_HIDDEN_NEURONS = 5
+# BATCH_SIZE = 128
+# OPTIMIZER = back_propagation
+# LEARNING_SCHEDULE_BOOL = True
+#
+# plt.figure(dpi=300)
+# INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
+# OUTPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS, NUMBER_OF_OUTPUTS)
+# # CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
+# CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
+# ff_network = initialize_neural_network()
+# train_error_log, test_error_log, final_epoch, min_error = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
+# print(min_error)
+# plt.plot(range(final_epoch), test_error_log, label='Test error')#, c='tab:orange')
+# plt.plot(range(final_epoch), train_error_log, label='Train error')#, c='tab:blue')
+# plt.xlabel('Epoch')
+# plt.ylabel('RMS error [-]')
+# plt.ylim(0, 0.1)
 # plt.grid()
 # plt.legend()
 # plt.show()
 
-# data initialization (maybe just mention that it has a significant effect)
+"""OPTIMIZE NUMBER OF HIDDEN NEURONS FOR ALL OTHER PARAMETERS FIXED"""
+np.random.seed(1)
+MAX_EPOCHS = 1000
+GOAL = 0.0001
+MIN_GRADIENT = 0.000001
+LEARNING_RATE = 0.1
+LM_DAMPING = 1
+BATCH_SIZE = 128
+OPTIMIZER = back_propagation
 
-# # number of neurons
+NUMBER_OF_INPUTS = 2
+NUMBER_OF_OUTPUTS = 1
+
+LEARNING_SCHEDULE_BOOL = True
+
+plt.figure(dpi=300)
+
+
+def optimizer(NUMBER_OF_HIDDEN_NEURONS):
+    rbf_network = initialize_neural_network()
+    train_error_log, test_error_log, final_epoch, min_error = train_neural_network(rbf_network, [train_data[0], train_data[1]], train_data[2], test_data)
+    print(min_error)
+    plt.plot(range(final_epoch), train_error_log, label='Train error, {} hidden neurons'.format(str(NUMBER_OF_HIDDEN_NEURONS)))
+    # plt.plot(range(final_epoch), test_error_log, label='Test error')
+    plt.xlabel('Epoch')
+    plt.ylabel('RMS error [-]')
+    plt.ylim(0, 0.1)
+    plt.grid()
+    plt.legend()
+    return min_error
+
+
+error_log = np.zeros(50)
+NUMBER_OF_HIDDEN_NEURONS = 15
+previous_error = 100
+last_increase = False
+i = 0
+change_rate = 5
+
+while i < 20:
+    if i > 5:
+        change_rate = 2
+    if i > 10:
+        change_rate = 1
+    if error_log[NUMBER_OF_HIDDEN_NEURONS-1] > 0:
+        current_error = error_log[NUMBER_OF_HIDDEN_NEURONS-1]
+    else:
+        INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
+        OUTPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS, NUMBER_OF_OUTPUTS)
+        CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
+        current_error = optimizer(NUMBER_OF_HIDDEN_NEURONS)
+    error_log[NUMBER_OF_HIDDEN_NEURONS - 1] = current_error
+    if last_increase:
+        if current_error < previous_error:
+            NUMBER_OF_HIDDEN_NEURONS += change_rate
+            last_increase = True
+        else:
+            NUMBER_OF_HIDDEN_NEURONS -= change_rate # no need to do times two, because, if we had a worse score it will go back to the already calculated one, which it will not recalculate so we will jump it either way
+            last_increase = False
+    else:
+        if current_error < previous_error:
+            NUMBER_OF_HIDDEN_NEURONS -= change_rate
+            last_increase = False
+        else:
+            NUMBER_OF_HIDDEN_NEURONS += change_rate
+            last_increase = True
+    previous_error = current_error
+    if NUMBER_OF_HIDDEN_NEURONS < 2:
+        NUMBER_OF_HIDDEN_NEURONS = 2
+    i+=1
+
+print(error_log)
+plt.show()
+
+"""BACKPROP vs LM"""
 # np.random.seed(1)
-# MAX_EPOCHS = 100
-# GOAL = 0.0001
-# MIN_GRADIENT = 0.0000001
-# LEARNING_RATE = 0.01
-# # LEARNING_RATE = 0.1
-# LM_DAMPING = 1
+# MAX_EPOCHS = 2000
+# GOAL = 0.001
+# MIN_GRADIENT = 0.000001
+# LEARNING_RATE = 0.0001
+# LM_DAMPING = 0.1
 # NUMBER_OF_HIDDEN_NEURONS = 15
-# BATCH_SIZE = 256
+# BATCH_SIZE = 4
 # OPTIMIZER = back_propagation
 #
 # plt.figure(dpi=300)
-# for i in [3, 5, 10, 25, 50]:  # with the random init we start with a higher error because of the higher number of neurons
-#     NUMBER_OF_HIDDEN_NEURONS = i
+# for i in [levenberg_marquardt, back_propagation]:
+#     OPTIMIZER = i
 #
 #     # weights initialization
 #     INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
@@ -119,54 +247,23 @@ NUMBER_OF_OUTPUTS = 1
 #     ff_network = initialize_neural_network()
 #     train_error_log, test_error_log, final_epoch = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
 #
-#     plt.plot(range(final_epoch), test_error_log, label='Test error, {} hidden nodes'.format(i))#, c='tab:orange')
-#     plt.plot(range(final_epoch), train_error_log, label='Train error, {} hidden nodes'.format(i))#, c='tab:blue')
+#     output = []
+#     for j in range(len(time_data[0])):
+#         output.append(ff_network.evaluate([time_data[0,j], time_data[1,j]]))
+#
+#     optimizer_names = ['backpropagation', 'Levenberg Marquardt']
+#
+#     # plt.subplot(1, 2, 1)
+#     plt.plot(range(final_epoch), test_error_log, label='Test error, ' + OPTIMIZER.__name__)#, c='tab:orange')
+#     plt.plot(range(final_epoch), train_error_log, label='Train error, ' + OPTIMIZER.__name__)#, c='tab:blue')
 #     plt.xlabel('Epoch')
 #     plt.ylabel('RMS error [-]')
+#
+#     # plt.subplot(1, 2, 2)
+#     # plt.plot(range(len(time_data[0])), np.array(output)[:, 0], label='Time sequence, ' + OPTIMIZER.__name__)
+# # plt.subplot(1, 2, 2)
+# # plt.plot(range(len(time_data[0])), time_data[2,:], label='Time sequence, ' + OPTIMIZER.__name__)
 # plt.grid()
 # plt.legend()
 # plt.show()
-#
-# backprop vs LM
-np.random.seed(1)
-MAX_EPOCHS = 50
-GOAL = 0.001
-MIN_GRADIENT = 0.000001
-LEARNING_RATE = 0.0001
-LM_DAMPING = 0.1
-NUMBER_OF_HIDDEN_NEURONS = 5
-BATCH_SIZE = 4
-OPTIMIZER = back_propagation
-
-plt.figure(dpi=300)
-for i in [levenberg_marquardt, back_propagation]:
-    OPTIMIZER = i
-
-    # weights initialization
-    INPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_INPUTS, NUMBER_OF_HIDDEN_NEURONS)
-    OUTPUT_WEIGHTS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS, NUMBER_OF_OUTPUTS)
-    # CENTERS_INIT = np.random.rand(NUMBER_OF_HIDDEN_NEURONS)
-    CENTERS_INIT = np.zeros(NUMBER_OF_HIDDEN_NEURONS)
-    ff_network = initialize_neural_network()
-    train_error_log, test_error_log, final_epoch = train_neural_network(ff_network, [train_data[0], train_data[1]], train_data[2], test_data)
-
-    output = []
-    for j in range(len(time_data[0])):
-        output.append(ff_network.evaluate([time_data[0,j], time_data[1,j]]))
-
-    optimizer_names = ['backpropagation', 'Levenberg Marquardt']
-
-    # plt.subplot(1, 2, 1)
-    plt.plot(range(final_epoch), test_error_log, label='Test error, ' + OPTIMIZER.__name__)#, c='tab:orange')
-    plt.plot(range(final_epoch), train_error_log, label='Train error, ' + OPTIMIZER.__name__)#, c='tab:blue')
-    plt.xlabel('Epoch')
-    plt.ylabel('RMS error [-]')
-
-    # plt.subplot(1, 2, 2)
-    # plt.plot(range(len(time_data[0])), np.array(output)[:, 0], label='Time sequence, ' + OPTIMIZER.__name__)
-# plt.subplot(1, 2, 2)
-# plt.plot(range(len(time_data[0])), time_data[2,:], label='Time sequence, ' + OPTIMIZER.__name__)
-plt.grid()
-plt.legend()
-plt.show()
-# todo; plot results in time; approximation vs real
+# # todo; plot results in time; approximation vs real
