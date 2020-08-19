@@ -228,7 +228,7 @@ for k in range(0, N):
 
     XX_k1k1[:, k] = x_k_1k_1
 # print(XX_k1k1[:, -1])
-do_plot = 0
+do_plot = 1
 if do_plot:
     start = 0
     end = -1
@@ -258,57 +258,66 @@ if do_plot:
     # plt.legend()
     # plt.show()
     #
-    # plt.figure(dpi=300)
-    # plt.title(r'$C_{\alpha_{up}}$')
-    # plt.plot(T[0, start:end], XX_k1k1[3, start:end])
-    # plt.xlabel(r'$Time\,[s]$')
-    # plt.ylabel(r'$C_{\alpha_{up}}\,[-]$')
-    # # plt.legend()
-    # plt.show()
+    plt.figure(dpi=300)
+    plt.title(r'$C_{\alpha_{up}}$')
+    plt.plot(T[0, start:end], XX_k1k1[3, start:end])
+    plt.xlabel(r'$Time\,[s]$')
+    plt.ylabel(r'$C_{\alpha_{up}}\,[-]$')
+    # plt.legend()
+    plt.show()
 
     plt.figure(dpi=300)
-    plt.title(r'$Predicted\,vs\,Measured\,Output$')
-    plt.plot(T[0, start:end], np.transpose(z_k[0, start:end]), 'g', label=r'$\alpha_m$')
-    plt.plot(T[0, start:end], np.transpose(z_pred[0, start:end]), color='r', linewidth=2, label=r'$\alpha_p$')
-    plt.plot(T[0,start:end], np.transpose(z_k[0,start:end]-XX_k1k1[3,start:end]), label=r'$\alpha_{corrected}$')  # todo; check if correct
+    plt.title(r'Measured vs Predicted vs Corrected $\alpha$')
+    plt.plot(T[0, start:end], np.transpose(z_k[0, start:end]), color='tab:blue', label=r'$\alpha_m$')
+    plt.plot(T[0, start:end], np.transpose(z_pred[0, start:end]), color='tab:orange', linewidth=2, label=r'$\alpha_p$')
+    plt.plot(T[0,start:end], np.transpose(z_k[0,start:end]-XX_k1k1[3,start:end]), color='tab:green', label=r'$\alpha_{corrected}$')  # todo; check if correct
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$\alpha\,[rad]$')
+    plt.ylim(bottom=-1, top=1)
 
-    # polyfit
-    DEGREE = 2
-    V_poly = np.polyfit(T[0, start:end], np.transpose(z_pred[0, start:end]), DEGREE)
-    V_poly_f = np.poly1d(V_poly)
-    plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+    # # polyfit
+    # DEGREE = 2
+    # V_poly, res, _, _, _ = np.polyfit(T[0, start:end], np.transpose(z_pred[0, start:end]), DEGREE, DEGREE, full=True)
+    # print(res / len(T[0, start:end]))
+    # V_poly_f = np.poly1d(V_poly)
+    # plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+    plt.grid()
     plt.legend()
     plt.show()
 
     plt.figure(dpi=300)
-    plt.title(r'$Predicted\,vs\,Measured\,Output$')
-    plt.plot(T[0, start:end], np.transpose(z_k[1, start:end]), 'g', label=r'$\beta_m$')
-    plt.plot(T[0, start:end], np.transpose(z_pred[1, start:end]), color='r', linewidth=2, label=r'$\beta_p$')
+    plt.title(r'Measured vs Predicted $\beta$')
+    plt.plot(T[0, start:end], np.transpose(z_k[1, start:end]), color='tab:blue', label=r'$\beta_m$')
+    plt.plot(T[0, start:end], np.transpose(z_pred[1, start:end]), color='tab:orange', linewidth=2, label=r'$\beta_p$')
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$\beta\,[rad]$')
 
-    # polyfit
-    DEGREE = 2
-    V_poly = np.polyfit(T[0, start:end], np.transpose(z_pred[1, start:end]), DEGREE)
-    V_poly_f = np.poly1d(V_poly)
-    plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+    # # polyfit
+    # DEGREE = 2
+    # V_poly, res, _, _, _ = np.polyfit(T[0, start:end], np.transpose(z_pred[1, start:end]), DEGREE, DEGREE, full=True)
+    # print(res / len(T[0, start:end]))
+    # V_poly_f = np.poly1d(V_poly)
+    # plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+
+
+    plt.grid()
     plt.legend()
     plt.show()
 
     plt.figure(dpi=300)
-    plt.title(r'$Predicted\,vs\,Measured\,Output$')
-    plt.plot(T[0, start:end], np.transpose(z_k[2, start:end]), 'g', label=r'$V_m$')
-    plt.plot(T[0, start:end], np.transpose(z_pred[2, start:end]), color='r', linewidth=2, label=r'$V_p$')
+    plt.title(r'Measured vs Predicted $V$')
+    plt.plot(T[0, start:end], np.transpose(z_k[2, start:end]), color='tab:blue', label=r'$V_m$')
+    plt.plot(T[0, start:end], np.transpose(z_pred[2, start:end]), color='tab:orange', linewidth=2, label=r'$V_p$')
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$V\,[rad]$')
 
-    # polyfit
-    DEGREE = 2
-    V_poly = np.polyfit(T[0, start:end], np.transpose(z_pred[2, start:end]), DEGREE)
-    V_poly_f = np.poly1d(V_poly)
-    plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+    # # polyfit
+    # DEGREE = 2
+    # V_poly, res, _, _, _ = np.polyfit(T[0, start:end], np.transpose(z_pred[2, start:end]), DEGREE, full=True)
+    # print(res/len(T[0, start:end]))
+    # V_poly_f = np.poly1d(V_poly)
+    # plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+    plt.grid()
     plt.legend()
     plt.show()
 
@@ -317,6 +326,7 @@ if do_plot:
     # plt.title('Measured data')
     # plt.plot(T[0, start:end], alpha_m[start:end])
     # plt.show()
+
 
 # generate train, val, test data
 PERCENTAGE_VALIDATION = 0.2
@@ -327,6 +337,7 @@ beta_p = z_pred[1, 0:-1]
 cm_a = XX_k1k1[3, 0:-1]
 
 data = np.array([alpha_corrected, beta_p, cm_a])
+np.savetxt("all_data.csv", data, delimiter=",")
 time_sequence_indices = np.arange(5000, int(5000+10/0.01))
 time_sequence = data[:, time_sequence_indices]
 np.savetxt("time_sequence.csv", time_sequence, delimiter=",")
