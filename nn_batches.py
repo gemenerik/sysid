@@ -29,23 +29,44 @@ def train_neural_network(net, input, desired_output, test_data):
     while current_epoch < net.max_epochs:
         try:
             if train_error > net.goal:
+                if net.learning_schedule:
+                    if current_epoch > 0:
+                        if current_epoch % 100 == 0:
+                            net.learning_rate *= 0.9
                 if error_improvement < net.min_gradient:
                     useless_iterations += 1
                 else:
                     useless_iterations = 0
-                if useless_iterations >= 10:
+                if useless_iterations >= 1000:
                     end_time = time.time()
                     print('Runtime ', end_time - start_time)
-                    return train_error_log, test_error_log, current_epoch
+                    return train_error_log, test_error_log, current_epoch, min(train_error_log)
                 # train_output = []
+                train_error = []
+
+                test_output = []
+                for z in range(len(test_data[0])):
+                    test_output.append(net.evaluate([test_data[0, z], test_data[1, z]])[0])
+                desired_test_output = test_data[2, :]
+                # test_error = 1 / len(test_data[0]) * np.sum(np.square(np.array(desired_test_output) - test_output))
+                test_error = (np.square(desired_test_output - test_output)).mean(axis=None)
+                test_error_log.append(test_error)
+
+                # train_output = []
+                # for z in range(len(input[0])):
+                #     train_output.append(net.evaluate([np.array(input)[0, z], np.array(input)[1, z]])[0])
+                # desired_train_output = desired_output[:]
+                # # train_error = 1 / len(input[0]) * np.sum(np.square(np.array(desired_train_output) - train_output))
+                # train_error = (np.square(desired_train_output - train_output)).mean(axis=None)
+                # print(train_error)
+
                 for i in range(epoch_steps):
                     current_input = np.array(input)[:, i*net.batch_size:i*net.batch_size+net.batch_size]
                     current_desired_output = np.array(desired_output[i*net.batch_size:i*net.batch_size+net.batch_size])
                     batch_output, batch_hidden_output = net.evaluate(current_input)
                     current_error = net.evaluate_error(current_desired_output, batch_output).T
-
+                    train_error.append(current_error)
                     input_jacobian, output_jacobian = net.get_jacobian(current_input, current_desired_output)
-
                     if net.optimizer == levenberg_marquardt:
                         new_input_weights = levenberg_marquardt(net.damping, input_jacobian, net.input_weights,
                                                                 error=current_error, type = True)
@@ -59,20 +80,8 @@ def train_neural_network(net, input, desired_output, test_data):
                     net.input_weights = new_input_weights
                     net.output_weights = new_output_weights
 
-                test_output = []
-                for z in range(len(test_data[0])):
-                    test_output.append(net.evaluate([test_data[0,z], test_data[1,z]])[0])
-                desired_test_output = test_data[2,:]
-                # test_error = 1 / len(test_data[0]) * np.sum(np.square(np.array(desired_test_output) - test_output))
-                test_error = (np.square(desired_test_output - test_output)).mean(axis=None)
-                test_error_log.append(test_error)
+                train_error = (np.array(train_error).mean(axis=None))
 
-                train_output = []
-                for z in range(len(input[0])):
-                    train_output.append(net.evaluate([np.array(input)[0, z], np.array(input)[1, z]])[0])
-                desired_train_output = desired_output[:]
-                # train_error = 1 / len(input[0]) * np.sum(np.square(np.array(desired_train_output) - train_output))
-                train_error = (np.square(desired_train_output - train_output)).mean(axis=None)
                 if current_epoch > 0:
                     error_improvement = min(train_error_log) - train_error
                 train_error_log.append(train_error)
@@ -84,12 +93,12 @@ def train_neural_network(net, input, desired_output, test_data):
             if stored_exception:
                 end_time = time.time()
                 print('Runtime ', end_time - start_time)
-                return train_error_log, test_error_log, current_epoch
+                return train_error_log, test_error_log, current_epoch, min(train_error_log)
         except KeyboardInterrupt:
             stored_exception = sys.exc_info()
     end_time = time.time()
     print('Runtime ', end_time - start_time)
-    return train_error_log, test_error_log, current_epoch
+    return train_error_log, test_error_log, current_epoch, min(train_error_log)
 
 
 class NeuralNetwork:
@@ -98,7 +107,7 @@ class NeuralNetwork:
     def __init__(self, number_of_inputs, number_of_hidden_neurons, number_of_outputs, input_bias_weights,
                  output_bias_weights, range, max_epochs, goal, min_gradient, learning_rate, activation_function,
                  optimizer, loss_function, input_weights, output_weights, centers, batch_size, damping,
-                 diff_activation_function):
+                 diff_activation_function, learning_schedule):
         self.number_of_inputs = number_of_inputs
         self.number_of_hidden_neurons = number_of_hidden_neurons
         self.number_of_outputs = number_of_outputs
@@ -118,6 +127,7 @@ class NeuralNetwork:
         self.batch_size = batch_size
         self.damping = damping
         self.diff_activation_function = diff_activation_function
+        self.learning_schedule = learning_schedule
 
     def evaluate(self, input):
         """Feeds forward inputs and return output of network"""
