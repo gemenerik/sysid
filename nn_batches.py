@@ -40,7 +40,7 @@ def train_neural_network(net, input, desired_output, test_data):
                 if useless_iterations >= 1000:
                     end_time = time.time()
                     print('Runtime ', end_time - start_time)
-                    return train_error_log, test_error_log, current_epoch, min(train_error_log)
+                    return train_error_log, test_error_log, current_epoch, min(train_error_log), train_error_log.index(min(train_error_log))
                 # train_output = []
                 train_error = []
 
@@ -49,7 +49,7 @@ def train_neural_network(net, input, desired_output, test_data):
                     test_output.append(net.evaluate([test_data[0, z], test_data[1, z]])[0])
                 desired_test_output = test_data[2, :]
                 # test_error = 1 / len(test_data[0]) * np.sum(np.square(np.array(desired_test_output) - test_output))
-                test_error = (np.square(desired_test_output - test_output)).mean(axis=None)
+                test_error = np.sqrt((np.square(desired_test_output - test_output)).mean(axis=None))
                 test_error_log.append(test_error)
 
                 # train_output = []
@@ -80,25 +80,26 @@ def train_neural_network(net, input, desired_output, test_data):
                     net.input_weights = new_input_weights
                     net.output_weights = new_output_weights
 
-                train_error = (np.array(train_error).mean(axis=None))
+                train_error = np.sqrt(np.array(train_error).mean(axis=None))
 
                 if current_epoch > 0:
                     error_improvement = min(train_error_log) - train_error
                 train_error_log.append(train_error)
                 current_epoch += 1
-                print('Epoch ', current_epoch)
-                print('Train error is ', train_error)
-                print('Test error is ', test_error)
+                if current_epoch%25 ==0:
+                    print('Epoch ', current_epoch)
+                    print('Train error is ', train_error)
+                    print('Test error is ', test_error)
 
             if stored_exception:
                 end_time = time.time()
                 print('Runtime ', end_time - start_time)
-                return train_error_log, test_error_log, current_epoch, min(train_error_log)
+                return train_error_log, test_error_log, current_epoch, min(train_error_log), train_error_log.index(min(train_error_log))
         except KeyboardInterrupt:
             stored_exception = sys.exc_info()
     end_time = time.time()
     print('Runtime ', end_time - start_time)
-    return train_error_log, test_error_log, current_epoch, min(train_error_log)
+    return train_error_log, test_error_log, current_epoch, min(train_error_log), train_error_log.index(min(train_error_log))
 
 
 class NeuralNetwork:
