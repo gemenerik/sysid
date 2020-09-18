@@ -1,8 +1,10 @@
 import numpy as np
 from scipy.io import loadmat
-from scipy.signal import cont2discrete
 from scipy.linalg import expm
 import matplotlib.pyplot as plt
+
+
+iterated = False
 
 data = loadmat('F16traindata_CMabV_2020.mat')
 z_k = np.transpose(data['Z_k'])
@@ -16,42 +18,6 @@ v_m = z_k[2,:]
 Au = u_k[0,:]
 Av = u_k[1,:]
 Aw = u_k[2,:]
-
-
-def plot_data():
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.view_init(90,0)
-    ax.plot_trisurf(alpha_m, beta_m, c_m, cmap=cm.jet)
-    ax.set_xlabel(r'$\alpha_m$')
-    ax.set_ylabel(r'$\beta_m$')
-    ax.set_zlabel(r'$V_{tot}$')
-    plt.show()
-
-#
-# def rk4_step(f, x, t, dt, *args):
-#     """
-#     One step of 4th Order Runge-Kutta method
-#     """
-#     k = dt
-#     k1 = k * f(t, x, *args)
-#     k2 = k * f(t + 0.5*k, x + 0.5*k1, *args)
-#     k3 = k * f(t + 0.5*k, x + 0.5*k2, *args)
-#     k4 = k * f(t + dt, x + k3, *args)
-#     return x + 1/6. * (k1 + 2*k2 + 2*k3 + k4)
-#
-#
-# def rk4(f, t, x0, *args):
-#     """
-#     4th Order Runge-Kutta method
-#     """
-#     n = len(t)
-#     x = np.zeros((n, len(x0)))
-#     x[0] = x0
-#     for i in range(n-1):
-#         dt = t[i+1] - t[i]
-#         x[i+1] = rk4_step(f, x[i], t[i], dt, *args)
-#     return x
 
 
 def rk4(f, x, u, t):
@@ -68,7 +34,6 @@ def rk4(f, x, u, t):
         k4 = h * f(x + k3, u, t[0] + j * h + h)
 
         x = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
-
     return [t, x]
 
 
@@ -97,17 +62,10 @@ def h(x):
     return z_pred
 
 
-# def F(x, u, t):
-#     """
-#     Calculate Jacobian of f
-#     """
-#     return np.zeros([4, 4])
-
-
 def jacobian_h(t, x, u):
-    #     """
-    #     Calculate Jacobian of h, H
-    #     """
+    """
+    Calculate Jacobian of h, H
+    """
     jacobian = np.zeros((3,4))
     u = x[0]
     v = x[1]
@@ -128,18 +86,20 @@ def jacobian_h(t, x, u):
     return jacobian
 
 
-def c2d(a, b, t):  # todo; make own c2d function
-    """Continuous to discrete, based on MATLAB code"""
-    n  = np.size(a, 1)
+def c2d(a, b, t):
+    """
+    Continuous to discrete, based on MATLAB code
+    """
+    na  = np.size(a, 1)
     nb = np.size(b, 1)
-    temp1 = np.concatenate((a, b), axis=1)*t
-    temp2 = np.zeros((nb,n+nb))
+    temp_0 = np.concatenate((a, b), axis=1)*t
+    temp_1 = np.zeros((nb,na+nb))
 
-    temp = np.concatenate((temp1, temp2), 0)
+    temp = np.concatenate((temp_0, temp_1), 0)
 
     s = expm(temp)
-    Phi = s[0:n,0:n]
-    Gamma = s[0:n,n:n+nb]
+    Phi = s[0:na,0:na]
+    Gamma = s[0:na,na:na+nb]
     return Phi, Gamma
 
 
@@ -163,17 +123,11 @@ P_0 = np.diag(np.square(sigma_x0))  # initial guess
 
 Ex_0 = [150., 0., 0., 0.]  # initial guess
 
-# =========================
-
 XX_k1k1 = np.zeros((n, N))
 PP_k1k1 = np.zeros((n, N))
 SIGMA_x_cor = np.zeros((n, N))
 z_pred = np.zeros((nm, N))
 IEKFitcount = np.zeros(N)
-# epsilon = 1e-12
-# doIEKF = 1
-# do_plot = 0
-# maxIterations = 2
 T = np.zeros((1,N))
 
 x_k_1k_1 = Ex_0  # assign initial guess
@@ -186,10 +140,8 @@ U_k = u_k
 Z_k = z_k
 
 for k in range(0, N):
-    # One-step ahead prediction
     [t, x_kk_1] = rk4(f, x_k_1k_1, U_k[:,k], [ti, tf])
-    T[:,k] = t[0]  # alternatively; take the center value?
-
+    T[:,k] = t[0]
     z_kk_1 = h(x_kk_1)
     z_pred[:,k] = z_kk_1
 
@@ -208,10 +160,22 @@ for k in range(0, N):
     # Kalman gain calculation
     K = P_kk_1.dot(H.T).dot(np.linalg.inv(H.dot(P_kk_1).dot(H.T) + R))
 
-    # Measurement update
-    # x_k_1k_1 = x_kk_1 + K.dot(z_kk_1 - h(x_kk_1))
-    x_k_1k_1 = x_kk_1 + K.dot(Z_k[:, k] - z_kk_1)
-    # todo; iterated
+    # Iterations
+    if iterated:
+        improvement = [1e3, 1e3]
+        eta = x_kk_1
+        while max(improvement) > 1e-5:
+            eta_new = x_kk_1 + K.dot(Z_k[:, k] - z_kk_1 - H.dot(x_kk_1-eta))
+            H = jacobian_h(0, eta_new, U_k[:, k])
+            K = P_kk_1.dot(H.T).dot(np.linalg.inv(H.dot(P_kk_1).dot(H.T) + R))
+            improvement = (eta_new - eta)/eta
+            eta = eta_new
+        x_k_1k_1 = eta
+
+    else:
+        # Measurement update
+        # x_k_1k_1 = x_kk_1 + K.dot(z_kk_1 - h(x_kk_1))
+        x_k_1k_1 = x_kk_1 + K.dot(Z_k[:, k] - z_kk_1)
 
     # Cov. matrix of state estimation error
     P_k_1k_1 = (np.identity(n) - K.dot(H)).dot(P_kk_1)
@@ -227,7 +191,7 @@ for k in range(0, N):
     # todo; define matrix using sympy Matrix([udot])
 
     XX_k1k1[:, k] = x_k_1k_1
-# print(XX_k1k1[:, -1])
+print(XX_k1k1[:, -1])
 do_plot = 1
 if do_plot:
     start = 0
@@ -247,14 +211,14 @@ if do_plot:
     # plt.show()
     #
     # plt.figure(dpi=300)
-    # plt.title(r'$STD_{cross-correlation}$')
-    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[0, 0:500]), label=r'$u$')
-    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[1, 0:500]), label=r'$v$')
-    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[2, 0:500]), label=r'$w$')
-    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[3, 0:500]), label=r'$C_{\alpha_{up}}$')
+    # plt.title('Standard deviation state variables')
+    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[0, 0:500]), label=r'$\sigma_u$')
+    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[1, 0:500]), label=r'$\sigma_v$')
+    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[2, 0:500]), label=r'$\sigma_w$')
+    # plt.plot(T[0, 0:500], np.transpose(SIGMA_x_cor[3, 0:500]), label=r'$\sigma_{C_{\alpha_{up}}}$')
     # plt.ylim([-0.5, 3.5])
     # plt.xlabel(r'$Time\,[s]$')
-    # plt.ylabel(r'$\beta\,[rad]$')
+    # plt.ylabel('Standard deviation')
     # plt.legend()
     # plt.show()
     #
@@ -263,6 +227,7 @@ if do_plot:
     plt.plot(T[0, start:end], XX_k1k1[3, start:end])
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$C_{\alpha_{up}}\,[-]$')
+    plt.ylim(-1, 1)
     # plt.legend()
     plt.show()
 
@@ -270,7 +235,8 @@ if do_plot:
     plt.title(r'Measured vs Predicted vs Corrected $\alpha$')
     plt.plot(T[0, start:end], np.transpose(z_k[0, start:end]), color='tab:blue', label=r'$\alpha_m$')
     plt.plot(T[0, start:end], np.transpose(z_pred[0, start:end]), color='tab:orange', linewidth=2, label=r'$\alpha_p$')
-    plt.plot(T[0,start:end], np.transpose(z_k[0,start:end]-XX_k1k1[3,start:end]), color='tab:green', label=r'$\alpha_{corrected}$')  # todo; check if correct
+    plt.plot(T[0,start:end], np.transpose(z_k[0,start:end]-0.1650959), color='tab:green', label=r'$\alpha_{corrected}$')
+    # plt.plot(T[0,start:end], np.transpose(z_k[0,start:end]-XX_k1k1[3,start:end]), color='tab:green', label=r'$\alpha_{corrected}$')
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$\alpha\,[rad]$')
     plt.ylim(bottom=-1, top=1)
@@ -306,20 +272,21 @@ if do_plot:
 
     plt.figure(dpi=300)
     plt.title(r'Measured vs Predicted $V$')
-    plt.plot(T[0, start:end], np.transpose(z_k[2, start:end]), color='tab:blue', label=r'$V_m$')
+    # plt.plot(T[0, start:end], np.transpose(z_k[2, start:end]), color='tab:blue', label=r'$V_m$')
     plt.plot(T[0, start:end], np.transpose(z_pred[2, start:end]), color='tab:orange', linewidth=2, label=r'$V_p$')
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$V\,[rad]$')
-
-    # # polyfit
-    # DEGREE = 2
-    # V_poly, res, _, _, _ = np.polyfit(T[0, start:end], np.transpose(z_pred[2, start:end]), DEGREE, full=True)
-    # print(res/len(T[0, start:end]))
-    # V_poly_f = np.poly1d(V_poly)
-    # plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
     plt.grid()
     plt.legend()
     plt.show()
+
+    # # polyfit
+    # DEGREE = 3
+    # V_poly, res, _, _, _ = np.polyfit(T[0, start:end], np.transpose(z_pred[2, start:end]), DEGREE, full=True)
+    # print(res, res/len(T[0, start:end]))
+    # V_poly_f = np.poly1d(V_poly)
+    # plt.plot(V_poly_f(np.arange(0, 100, 1)), label='polyfit')
+
 
 
     # plt.figure(dpi=300)
@@ -332,12 +299,16 @@ if do_plot:
 PERCENTAGE_VALIDATION = 0.2
 np.random.seed(1)
 
-alpha_corrected = z_k[0,0:-1]-XX_k1k1[3,0:-1]  # todo; this or c_p
+alpha_corrected = z_k[0,0:-1] - 0.1650959
+                  # -XX_k1k1[3,0:-1]
 beta_p = z_pred[1, 0:-1]
-cm_a = XX_k1k1[3, 0:-1]
+c_alpha_up = XX_k1k1[3, 0:-1]
+C_m = c_m[0:-1]
 
-data = np.array([alpha_corrected, beta_p, cm_a])
-np.savetxt("all_data.csv", data, delimiter=",")
+all_data = data = np.array([alpha_corrected, beta_p, c_m[0:-1]])
+np.savetxt("all_data.csv", all_data, delimiter=",")
+
+data = np.array([alpha_corrected, beta_p, C_m])
 time_sequence_indices = np.arange(5000, int(5000+10/0.01))
 time_sequence = data[:, time_sequence_indices]
 np.savetxt("time_sequence.csv", time_sequence, delimiter=",")
