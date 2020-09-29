@@ -31,8 +31,12 @@ def train_neural_network(net, input, desired_output, test_data):
             if train_error > net.goal:
                 if net.learning_schedule:
                     if current_epoch > 0:
-                        if current_epoch % 100 == 0:
-                            net.learning_rate *= 0.9
+                        if current_epoch == 15:
+                            net.learning_rate *= 0.1
+                            print('NEW LEARNING RATE = ', net.learning_rate)
+                        if current_epoch == 50:
+                            net.learning_rate *= 0.5
+                            print('NEW LEARNING RATE = ', net.learning_rate)
                 if error_improvement < net.min_gradient:
                     useless_iterations += 1
                 else:
@@ -86,7 +90,7 @@ def train_neural_network(net, input, desired_output, test_data):
                     error_improvement = min(train_error_log) - train_error
                 train_error_log.append(train_error)
                 current_epoch += 1
-                if current_epoch%25 ==0:
+                if current_epoch%1 ==0:
                     print('Epoch ', current_epoch)
                     print('Train error is ', train_error)
                     print('Test error is ', test_error)
