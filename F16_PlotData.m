@@ -43,7 +43,7 @@ plotID = 101;
 figure(plotID);
 set(plotID, 'Position', [0 100 900 500], 'defaultaxesfontsize', 10, 'defaulttextfontsize', 10, 'color', [1 1 1], 'PaperPositionMode', 'auto');
 % plot data points
-plot3(alpha_m, beta_m, Cm, '.k'); % note that alpha_m = alpha, beta_m = beta, y = Cm
+plot3(alpha_mtrue, beta_mtrue, Cmtrue, '.k'); % note that alpha_m = alpha, beta_m = beta, y = Cm
 view(0, 90); 
 ylabel('beta [rad]');
 xlabel('alpha [rad]');
@@ -86,12 +86,66 @@ end
 x0 = alpha_m;
 y0 = beta_m;
 z0 = Cm;
+TRIeval0 = delaunayn(([x0' y0']));
+plotID = 1000;
+figure(plotID);
+set(plotID, 'Position', [800 100 900 500], 'defaultaxesfontsize', 10, 'defaulttextfontsize', 10, 'color', [1 1 1], 'PaperPositionMode', 'auto');
+trisurf(TRIeval0, alpha_mtrue,beta_mtrue,z0, 'EdgeColor', 'none'); 
+% plot3(alpha_mtrue,beta_mtrue,z0, 'xy');
+grid on;
+hold on;
+% plot data points
+plot3(alpha_mtrue,beta_mtrue,Cmtrue, '.k');% note that alpha_m = alpha, beta_m = beta, y = Cm
+view(az, el);
+ylabel('beta [rad]');
+xlabel('alpha [rad]');
+zlabel('C_m [-]');
+% title('F16 CM(\alpha_m, \beta_m) raw interpolation');
+% set fancy options for plotting 
+% xlim([-0.4 0.8]);
+% ylim([-0.2 0.2]);
+% zlim([-0.14 -0.02]);
+set(gcf,'Renderer','OpenGL');
+hold on;
+poslight = light('Position',[0.5 .5 15],'Style','local');
+hlight = camlight('headlight');
+material([.3 .8 .9 25]);
+minz = min(z0);
+shading interp;
+lighting phong;
+drawnow();
+
+% print results to disk if printfigs = 1
+if (printfigs == 1)
+    fpath = sprintf('fig_F16data3DSurf');
+    savefname = strcat(figpath, fpath);
+    print(plotID, '-dpng', '-r300', savefname);
+end
+
+'RMSE error of estimation is '
+sqrt(mean((Cmtrue - Cm).^2, 'all'))
+
+% fitting poly
+
+% X = [];
+% Y = [];
+% for i=1:30
+%     p = polyfitn([alpha_m' beta_m'], Cm', i);
+%     X = [X, p.RMSE];
+%     Y = [Y, i];
+% end
+% X
+% 
+% p = polyfitn([alpha_m' beta_m'], Cm', 15);
+% p.RMSE
+% presult = polyvaln(p, [alpha_m' beta_m']);
+% peval = [alpha_m' beta_m' presult];
 % 
 % TRIeval0 = delaunayn(([x0' y0']));
 % plotID = 1000;
 % figure(plotID);
 % set(plotID, 'Position', [800 100 900 500], 'defaultaxesfontsize', 10, 'defaulttextfontsize', 10, 'color', [1 1 1], 'PaperPositionMode', 'auto');
-% trisurf(TRIeval0, x0,y0,z0, 'EdgeColor', 'none'); 
+% trisurf(TRIeval0, x0,y0,presult, 'EdgeColor', 'none'); 
 % grid on;
 % hold on;
 % % plot data points
@@ -118,51 +172,3 @@ z0 = Cm;
 %     savefname = strcat(figpath, fpath);
 %     print(plotID, '-dpng', '-r300', savefname);
 % end
-
-% fitting poly
-
-X = [];
-Y = [];
-for i=1:30
-    p = polyfitn([alpha_m' beta_m'], Cm', i);
-    X = [X, p.RMSE];
-    Y = [Y, i];
-end
-X
-
-p = polyfitn([alpha_m' beta_m'], Cm', 15);
-p.RMSE
-presult = polyvaln(p, [alpha_m' beta_m']);
-peval = [alpha_m' beta_m' presult];
-
-TRIeval0 = delaunayn(([x0' y0']));
-plotID = 1000;
-figure(plotID);
-set(plotID, 'Position', [800 100 900 500], 'defaultaxesfontsize', 10, 'defaulttextfontsize', 10, 'color', [1 1 1], 'PaperPositionMode', 'auto');
-trisurf(TRIeval0, x0,y0,presult, 'EdgeColor', 'none'); 
-grid on;
-hold on;
-% plot data points
-plot3(x0,y0,z0, '.k');% note that alpha_m = alpha, beta_m = beta, y = Cm
-view(az, el);
-ylabel('beta [rad]');
-xlabel('alpha [rad]');
-zlabel('C_m [-]');
-% title('F16 CM(\alpha_m, \beta_m) raw interpolation');
-% set fancy options for plotting 
-set(gcf,'Renderer','OpenGL');
-hold on;
-poslight = light('Position',[0.5 .5 15],'Style','local');
-hlight = camlight('headlight');
-material([.3 .8 .9 25]);
-minz = min(z0);
-shading interp;
-lighting phong;
-drawnow();
-
-% print results to disk if printfigs = 1
-if (printfigs == 1)
-    fpath = sprintf('fig_F16data3DSurf');
-    savefname = strcat(figpath, fpath);
-    print(plotID, '-dpng', '-r300', savefname);
-end
