@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 
 iterated = False
-
 data = loadmat('F16traindata_CMabV_2020.mat')
 z_k = np.transpose(data['Z_k'])
 c_m = data['Cm'][:, 0]
@@ -20,21 +19,21 @@ Av = u_k[1,:]
 Aw = u_k[2,:]
 
 
-def rk4(f, x, u, t):
+def runk4(funciton, x_in, u_in, t_in):
     """
-    4th Order Runge-Kutta method
+    4th O Runge-Kutta method
     """
-    h = (t[1] - t[0]) / 2
-    N = (t[1] - t[0]) / h
+    he = (t_in[1] - t_in[0]) / 2
+    N = (t_in[1] - t_in[0]) / he
 
     for j in range(0, int(N)):
-        k1 = h * f(x, u, t[0] + j * h)
-        k2 = h * f(x + k1 / 2, u, t[0] + j * h + h / 2)
-        k3 = h * f(x + k2 / 2, u, t[0] + j * h + h / 2)
-        k4 = h * f(x + k3, u, t[0] + j * h + h)
+        k1 = he * funciton(x_in, u_in, t_in[0] + j * he)
+        k2 = he * funciton(x_in + k1 / 2, u_in, t_in[0] + j * he + he / 2)
+        k3 = he * funciton(x_in + k2 / 2, u_in, t_in[0] + j * he + he / 2)
+        k4 = he * funciton(x_in + k3, u_in, t_in[0] + j * he + he)
 
-        x = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
-    return [t, x]
+        x_in = x_in + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    return [t_in, x_in]
 
 
 def f(x, u, t):
@@ -46,44 +45,43 @@ def f(x, u, t):
     return x_dot
 
 
-def h(x):
+def h(input):
     """
     Output dynamics
     """
-    u = x[0]
-    v = x[1]
-    w = x[2]
-    c_alpha_up = x[3]
+    u = input[0]
+    v = input[1]
+    w = input[2]
+    c_alpha_up = input[3]
     z_pred = np.zeros((3))
-
     z_pred[0] = np.arctan2(w,u) * (c_alpha_up+1)
     z_pred[1] = np.arctan2(v, np.sqrt(u**2 + w**2))
     z_pred[2] = np.sqrt(u**2 + v**2 + w**2)
     return z_pred
 
 
-def jacobian_h(t, x, u):
+def jacobian_h(t_in, x_in, u_in):
     """
     Calculate Jacobian of h, H
     """
-    jacobian = np.zeros((3,4))
-    u = x[0]
-    v = x[1]
-    w = x[2]
-    c_alpha_up = x[3]
-    jacobian[0,0] = -(c_alpha_up + 1) * w/(u**2+w**2)
-    jacobian[0,1] = 0.
-    jacobian[0,2] = (c_alpha_up + 1) * u/(u**2+w**2)
-    jacobian[0,3] = np.arctan2(w,u)
-    jacobian[1,0] = -((u*v)/(np.sqrt(u**2 + w**2) * (u**2 + v**2 + w**2)))
-    jacobian[1,1] = np.sqrt(u**2 + w**2)/(u**2 + v**2 + w**2)
-    jacobian[1,2] = -((v*w)/(np.sqrt(u**2 + w**2) * (u**2 + v**2 + w**2)))
-    jacobian[1,3] = 0.
-    jacobian[2,0] = u / np.sqrt(u**2 + v**2 + w**2)
-    jacobian[2,1] = v / np.sqrt(u**2 + v**2 + w**2)
-    jacobian[2,2] = w / np.sqrt(u**2 + v**2 + w**2)
-    jacobian[2,3] = 0.
-    return jacobian
+    jacob_H = np.zeros((3,4))
+    u_in = x_in[0]
+    v = x_in[1]
+    w = x_in[2]
+    c_alpha_up = x_in[3]
+    jacob_H[0,0] = -(c_alpha_up + 1) * w/(u_in ** 2 + w ** 2)
+    jacob_H[0,1] = 0.
+    jacob_H[0,2] = (c_alpha_up + 1) * u_in / (u_in ** 2 + w ** 2)
+    jacob_H[0,3] = np.arctan2(w, u_in)
+    jacob_H[1,0] = -((u_in * v) / (np.sqrt(u_in ** 2 + w ** 2) * (u_in ** 2 + v ** 2 + w ** 2)))
+    jacob_H[1,1] = np.sqrt(u_in ** 2 + w ** 2) / (u_in ** 2 + v ** 2 + w ** 2)
+    jacob_H[1,2] = -((v*w) / (np.sqrt(u_in ** 2 + w ** 2) * (u_in ** 2 + v ** 2 + w ** 2)))
+    jacob_H[1,3] = 0.
+    jacob_H[2,0] = u_in / np.sqrt(u_in ** 2 + v ** 2 + w ** 2)
+    jacob_H[2,1] = v / np.sqrt(u_in ** 2 + v ** 2 + w ** 2)
+    jacob_H[2,2] = w / np.sqrt(u_in ** 2 + v ** 2 + w ** 2)
+    jacob_H[2,3] = 0.
+    return jacob_H
 
 
 def c2d(a, b, t):
@@ -92,15 +90,15 @@ def c2d(a, b, t):
     """
     na  = np.size(a, 1)
     nb = np.size(b, 1)
-    temp_0 = np.concatenate((a, b), axis=1)*t
-    temp_1 = np.zeros((nb,na+nb))
+    step_0 = np.concatenate((a, b), axis=1)*t
+    step_1 = np.zeros((nb,na+nb))
 
-    temp = np.concatenate((temp_0, temp_1), 0)
+    temp = np.concatenate((step_0, step_1), 0)
 
     s = expm(temp)
-    Phi = s[0:na,0:na]
-    Gamma = s[0:na,na:na+nb]
-    return Phi, Gamma
+    phi_out = s[0:na,0:na]
+    gamma_out = s[0:na,na:na+nb]
+    return phi_out, gamma_out
 
 
 dt = 0.01  # time step
@@ -109,25 +107,25 @@ n = 4  # number of states
 nm = 3  # number of measurements
 m = 3  # number of inputs
 
-B = np.vstack((np.identity(3), np.zeros(3)))  # input matrix
-G = np.identity(n)  # noise input matrix
-
-sigma_w = [1E-3, 1E-3, 1E-3, 0]
-Q = np.diag(np.square(sigma_w))
 
 sigma_v = [0.035, 0.013, 0.110]
 R = np.diag(np.square(sigma_v))
+
+sigma_w = [1E-3, 1E-3, 1E-3, 0]
+Q = np.diag(np.square(sigma_w))
 
 sigma_x0 = [2.0, 2.0, 2.0, 50.0]
 P_0 = np.diag(np.square(sigma_x0))  # initial guess
 
 Ex_0 = [150., 0., 0., 0.]  # initial guess
 
-XX_k1k1 = np.zeros((n, N))
-PP_k1k1 = np.zeros((n, N))
+B = np.vstack((np.identity(3), np.zeros(3)))  # input matrix
+G = np.identity(n)  # noise input matrix
+
+XX_kp1_kp1 = np.zeros((n, N))
+PP_kp1_kp1 = np.zeros((n, N))
 SIGMA_x_cor = np.zeros((n, N))
 z_pred = np.zeros((nm, N))
-IEKFitcount = np.zeros(N)
 T = np.zeros((1,N))
 
 x_k_1k_1 = Ex_0  # assign initial guess
@@ -140,7 +138,7 @@ U_k = u_k
 Z_k = z_k
 
 for k in range(0, N):
-    [t, x_kk_1] = rk4(f, x_k_1k_1, U_k[:,k], [ti, tf])
+    [t, x_kk_1] = runk4(f, x_k_1k_1, U_k[:, k], [ti, tf])
     T[:,k] = t[0]
     z_kk_1 = h(x_kk_1)
     z_pred[:,k] = z_kk_1
@@ -185,15 +183,10 @@ for k in range(0, N):
     # Time step
     ti = np.round(tf, 2)
     tf = np.round(tf + dt, 2)
-
-    # todo; check rank of observation matrix, must be full rank, for sensor fusion
-    # todo; analysis of state observability. Derivative of derivative.
-    # todo; define matrix using sympy Matrix([udot])
-
-    XX_k1k1[:, k] = x_k_1k_1
-print(XX_k1k1[:, -1])
-do_plot = 1
-if do_plot:
+    XX_kp1_kp1[:, k] = x_k_1k_1
+print(XX_kp1_kp1[:, -1])
+plot_bool = 1
+if plot_bool:
     start = 0
     end = -1
 
@@ -224,7 +217,7 @@ if do_plot:
     #
     plt.figure(dpi=300)
     plt.title(r'$C_{\alpha_{up}}$')
-    plt.plot(T[0, start:end], XX_k1k1[3, start:end])
+    plt.plot(T[0, start:end], XX_kp1_kp1[3, start:end])
     plt.xlabel(r'$Time\,[s]$')
     plt.ylabel(r'$C_{\alpha_{up}}\,[-]$')
     plt.ylim(-1, 1)
@@ -302,7 +295,7 @@ np.random.seed(1)
 alpha_corrected = z_k[0,0:-1] - 0.1650959
                   # -XX_k1k1[3,0:-1]
 beta_p = z_pred[1, 0:-1]
-c_alpha_up = XX_k1k1[3, 0:-1]
+c_alpha_up = XX_kp1_kp1[3, 0:-1]
 C_m = c_m[0:-1]
 
 all_data = data = np.array([alpha_corrected, beta_p, c_m[0:-1]])
